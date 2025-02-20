@@ -9,35 +9,41 @@ args = parser.parse_args()
 query_ip = "play.elisttm.space"
 servers = {
     "tf2": {
-        "id": "tf2",
+        "id": ["tf2a", "tf2b"],
+        "port": [27016, 27019],
         "type": "source",
         "msg": 'sm_say {}; sm_play @all "ui/system_message_alert.wav"',
-        "port": 27016,
     },
     "gmod": {
-        "id": ["gmod", "sandbox"],
+        "id": ["gmoda", "gmodb", "sandbox"],
+        "port": [27015, 27018, 27017],
         "type": "source",
-        "port": [27015, 27017],
         "msg": 'ulx tsay {}; ulx playsound common/warning.wav',
+    },
+    "hl2mp": {
+        "id": "hl2mp",
+        "port": 27039,
+        "type": "source",
+        "msg": 'sm_say {}; sm_play @all "misc/message.wav"',
     },
     "hldm": {
         "id": "hldm",
-        "type": "goldsrc",
         "port": 27013,
+        "type": "goldsrc",
         "msg": 'amx_say {}',
         "flags": ("noupdate")
     },
     "mc-creative": {
         "id": "mc-creative",
+        "port": 25570,
         "type": "minecraft",
         "msg": 'warning {}',
-        "port": 25570,
         "flags": ("noupdate")
     },
     "doom": {
         "id": "doom",
-        "type": "doom",
         "port": 6950,
+        "type": "doom",
         "msg": 'say {}',
         "flags": ("noupdate")
     },

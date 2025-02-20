@@ -2,14 +2,13 @@
 
 source /home/eli/.bashrc # just in case...
 
-SEDCMD="sed 's/qDRS/dmS/g'"
 DATETIME () { date '+%F %X'; }
 SUPD () { sed 's/validate//g' $1 | bash; }
 SRUN () {
-    if grep -wq $SEDCMD; then
-        SEDCMD $1 | bash;
-    else
+    if grep -wq 's/qDRS/dmS/g' $1; then
         $1
+    else
+        sed 's/qDRS/dmS/g' $1 | bash;
     fi
 }
 
@@ -27,6 +26,7 @@ pm2 resurrect # tf2autobot
 
 SRUN "/home/eli/_games/doom/start.sh"
 SRUN "/home/eli/_games/hldm/start.sh"
+SUPD "/home/eli/_games/hl2mp/update.sh" && SRUN "/home/eli/_games/hl2mp/start.sh"
 SUPD "/home/eli/_games/tf2/update.sh" && SRUN "/home/eli/_games/tf2/start.sh"
 SUPD "/home/eli/_games/gmod/update.sh" && SRUN "/home/eli/_games/gmod/start.sh"
 SUPD "/home/eli/_games/mc-creative/update.sh" && SRUN "/home/eli/_games/mc-creative/start.sh"
