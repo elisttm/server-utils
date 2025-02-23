@@ -8,11 +8,11 @@ allowed_folders = ("maps/", "gfx/", "models/", "materials/", "sound/", "sprites/
 allowed_filetypes = (".wad")
 
 paths = {
-    "valve":      path+"hldm/valve/",
     "tf":         path+"tf2/tf/",
     "garrysmod":  path+"gmod/garrysmod/",
+    "hl2mp":      path+"hl2mp/hl2mp",
+    "valve":      path+"hldm/valve/",
     "svencoop":   path+"sven/svencoop/",
-
     "doom":       path+"doom/wads/" # zandronum only
 }
 
@@ -20,13 +20,13 @@ paths = {
 async def index():
     return quart.redirect("https://elisttm.space")
 
-@app.route('/<game>/<path:filename>')
-async def fastdl(game, filename):
+@app.route('/<game>/<path:file>')
+async def fastdl(game, file):
     game = game.lower()
-    if game in paths and os.path.exists(paths[game]+filename) and (filename.lower().startswith(allowed_folders) or filename.lower().endswith(allowed_filetypes)):
-        print(f"[{game}] serving {filename}...")
-        return await send_from_directory(paths[game], filename)
-    print(f"[{game}] [404] {filename} requested but not found...")
+    if game in paths and os.path.exists(paths[game]+file) and (file.lower().startswith(allowed_folders) or file.lower().endswith(allowed_filetypes)):
+        print(f"[{game}] serving {file}...")
+        return await send_from_directory(paths[game], file)
+    print(f"[{game}] [404] {file} requested but not found...")
     return await abort(404)
 
 hyperconfig = hypercorn.config.Config()

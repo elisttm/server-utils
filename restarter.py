@@ -24,7 +24,7 @@ servers = {
         "id": "hl2mp",
         "port": 27039,
         "type": "source",
-        "msg": 'sm_say {}; sm_play @all "misc/message.wav"',
+        "msg": 'sm_say {}; sm_play @all "friends/message.wav"',
     },
     "hldm": {
         "id": "hldm",
@@ -181,29 +181,33 @@ for game in servers:
             subprocess.run(['screen', '-wipe']) # removes dead screens and prevents any issues those may cause
 
     if pids:
-        # get highest playercount in group of servers (if any)
-        player_count = 0
-        for _, query_count in queries.items():
-            if query_count and query_count > player_count:
-                player_count = query_count
-            else:
-                continue
+        try:
+            # get highest playercount in group of servers (if any)
+            player_count = 0
+            for _, query_count in queries.items():
+                if query_count and query_count > player_count:
+                    player_count = query_count
+                else:
+                    continue
 
-        if player_count <= 0:
-            print("    no players online! skipping countdown.")
-        elif player_count >= 1:
-            timer = 60
-            if args.shutdown:
-                screen_msg(game, ids, "the server is preparing to reboot and will offline for an indeterminate amount of time! please check back later...")
-            else:
-                screen_msg(game, ids, "the server is scheduled to restart soon! check https://elisttm.space/servers for statuses")
-            print(f"    {player_count} player(s) online! starting {timer} second countdown...")
-            time.sleep(2)
-            msg_countdown(game, ids, timer)
+            if player_count <= 0:
+                print("    no players online! skipping countdown.")
+            elif player_count >= 1:
+                timer = 60
+                if args.shutdown:
+                    screen_msg(game, ids, "the server is preparing to reboot and will offline for an indeterminate amount of time! please check back later...")
+                else:
+                    screen_msg(game, ids, "the server is scheduled to restart soon! check elisttm.space/servers for statuses")
+                print(f"    {player_count} player(s) online! starting {timer} second countdown...")
+                time.sleep(3)
+                msg_countdown(game, ids, timer)
 
-        for sid, pid in pids.items():
-            print(f"  closing {sid} ({pid})...")
-            stop_server(game, sid, pid)
+            for sid, pid in pids.items():
+                print(f"  closing {sid} ({pid})...")
+                stop_server(game, sid, pid)
+        
+        except BaseException:
+            screen_msg(game, ids, "the server restart has been aborted! continue as you were...")
 
     if not args.shutdown:
         if "noupdate" not in flags and os.path.exists(f"{gdir}update.sh"):
