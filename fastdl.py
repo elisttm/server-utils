@@ -4,8 +4,21 @@ from quart import abort, send_from_directory
 app = quart.Quart(__name__)
 
 path = "/home/eli/_games/"
-allowed_folders = ("maps/", "gfx/", "models/", "materials/", "sound/", "sprites/", "logos/", "particles/", "resource/") # allowed subfolders (e.g. /garrysmod/maps/)
-allowed_filetypes = (".wad")
+allowed_folders = ( # allowed subfolders (e.g. /tf/maps/)
+    "maps/",
+    "gfx/",
+    "models/",
+    "materials/",
+    "sound/",
+    "sprites/",
+    "logos/",
+    "particles/",
+    "resource/"
+)
+allowed_filetypes = (
+    ".wad",
+    "mapcycle.txt",
+)
 
 paths = {
     "tf":         path+"tf2/tf/",
@@ -24,9 +37,9 @@ async def index():
 async def fastdl(game, file):
     game = game.lower()
     if game in paths and os.path.exists(paths[game]+file) and (file.lower().startswith(allowed_folders) or file.lower().endswith(allowed_filetypes)):
-        print(f"[{game}] serving {file}...")
+        print(f"[{game}] serving {file}")
         return await send_from_directory(paths[game], file)
-    print(f"[{game}] [404] {file} requested but not found...")
+    print(f"[{game}] [404] {file} requested but not found")
     return await abort(404)
 
 hyperconfig = hypercorn.config.Config()
