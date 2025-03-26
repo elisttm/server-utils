@@ -26,6 +26,12 @@ servers = {
         "type": "source",
         "msg": 'sm_say {}; sm_play @all "friends/message.wav"',
     },
+    "sven": {
+        "id": "sven",
+        "port": 27043,
+        "type": "goldsrc",
+        "msg": 'amx_say {}',
+    },
     "hldm": {
         "id": "hldm",
         "port": 27013,
@@ -46,7 +52,7 @@ servers = {
         "msg": 'say {}',
         "flags": ("noupdate", "noquery")
     },
-        "quake": {
+    "quake": {
         "id": "quake",
         "port": 27049,
         "type": "quake",

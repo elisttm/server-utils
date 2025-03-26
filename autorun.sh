@@ -27,6 +27,7 @@ pm2 start /home/eli/_other/tf2autobot/ecosystem.json
 SRUN "/home/eli/_games/doom/start.sh"
 SRUN "/home/eli/_games/quake/start.sh"
 SRUN "/home/eli/_games/hldm/start.sh"
+SUPD "/home/eli/_games/sven/update.sh" && SRUN "/home/eli/_games/sven/start.sh"
 SUPD "/home/eli/_games/hl2mp/update.sh" && SRUN "/home/eli/_games/hl2mp/start.sh"
 SUPD "/home/eli/_games/tf2/update.sh" && SRUN "/home/eli/_games/tf2/start.sh"
 SUPD "/home/eli/_games/gmod/update.sh" && SRUN "/home/eli/_games/gmod/start.sh"
