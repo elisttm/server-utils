@@ -14,7 +14,8 @@ allowed_folders = ( # allowed subfolders (e.g. /tf/maps/)
     "sprites/",
     "logos/",
     "particles/",
-    "resource/"
+    "resource/",
+    "download/",
 )
 allowed_filetypes = (
     ".wad",
@@ -27,7 +28,8 @@ paths = {
     "hl2mp":      path+"hl2mp/hl2mp",
     "valve":      path+"hldm/valve/",
     "svencoop":   path+"sven/svencoop/",
-    "doom":       path+"doom/wads/" # zandronum only
+    "doom":       path+"doom/wads/", # zandronum only
+    "halo":       path+"eldewrito/download/" # eldewrito
 }
 
 async def construct_filelist(game, path):
