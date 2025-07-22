@@ -24,7 +24,9 @@ SRUN "/home/eli/_other/elibot/start.sh"
 SRUN "/home/eli/_other/shermbot/start.sh"
 pm2 start /home/eli/_other/tf2autobot/ecosystem.json
 
-SRUN "/home/eli/_games/doom/start.sh"
+SRUN "/home/eli/_games/eldewrito/start.sh"
+
+#SRUN "/home/eli/_games/doom/start.sh"
 SRUN "/home/eli/_games/quake/start.sh"
 SRUN "/home/eli/_games/hldm/start.sh"
 SUPD "/home/eli/_games/sven/update.sh" && SRUN "/home/eli/_games/sven/start.sh"

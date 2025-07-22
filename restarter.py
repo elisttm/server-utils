@@ -1,22 +1,45 @@
-import os, argparse, subprocess, psutil, time, a2s, mcstatus
+import os, argparse, subprocess, psutil, time, a2s, mcstatus, json, traceback
 
 parser = argparse.ArgumentParser(prog="restarter", description="")
 
 parser.add_argument("-e", "--exclusive", nargs="*", help="will restart ONLY the provided server(s)")
+parser.add_argument("-s", "--scheduled", nargs="*", help="will restart servers all at once at a specific time")
 parser.add_argument("--shutdown", action="store_true", help="will only stop servers and not restart them")
+parser.add_argument("--debug", action="store_true", help="for debugging, script wont do anything to the servers")
 args = parser.parse_args()
+
+user = "eli"
+gamedir = f"/home/{user}/_games/"
+
+qstat_bin = "/usr/bin/quakestat"
 
 query_ip = "play.elisttm.space"
 servers = {
     "tf2": {
-        "id": ["tf2a", "tf2b", "tf2z"],
-        "port": [27016, 27019, 27043],
+        "id": [
+            "tf2a",
+            "tf2b",
+            #"tf2z"
+        ],
+        "port": [
+            27016,
+            27019,
+            #27043
+        ],
         "type": "source",
         "msg": 'sm_say {}; sm_play @all "ui/system_message_alert.wav"',
     },
     "gmod": {
-        "id": ["gmoda", "gmodb", "sandbox"],
-        "port": [27015, 27018, 27017],
+        "id": [
+            "gmoda",
+            "gmodb",
+            "sandbox"
+        ],
+        "port": [
+            27015,
+            27018,
+            27017
+        ],
         "type": "source",
         "msg": 'ulx tsay {}; ulx playsound common/warning.wav',
     },
@@ -45,19 +68,12 @@ servers = {
         "type": "minecraft",
         "msg": 'warning {}',
     },
-    "doom": {
-        "id": "doom",
-        "port": 6950,
-        "type": "doom",
-        "msg": 'say {}',
-        "flags": ("noupdate", "noquery")
-    },
     "quake": {
         "id": "quake",
         "port": 27049,
         "type": "quake",
         "msg": 'say {}',
-        "flags": ("noupdate", "noquery")
+        "flags": ("noupdate")
     },
 }
 
@@ -68,13 +84,27 @@ server_timers = {
     "gmodb": 180,
 }
 
+qstat_games = {
+    "quake": "qws",
+    "halo": "gs2",
+}
+
 def screen_cmd(sid, cmd):
+    if args.debug:
+        return
     sid = [sid] if not isinstance(sid, list) else sid
     for s in sid:
         subprocess.run(f'screen -S {s} -X stuff "{cmd}\r"', shell=True)
 
 def screen_msg(game, sid, msg):
-    screen_cmd(sid, servers[game]["msg"].format(msg))
+    screen_cmd(sid, servers[game].get("msg", "").format(msg))
+
+def qstat_query(server_address, game):
+    try:
+        result = subprocess.run([qstat_bin,'-json','-ts','-P',f'-{qstat_games[game]}',server_address], capture_output=True, text=True, check=True)
+        return json.loads(result.stdout)[0]
+    except Exception as e:
+        return f"QSTAT ERROR: {e}"
 
 def query_server(game, port):
     try:
@@ -82,9 +112,12 @@ def query_server(game, port):
             return a2s.info((query_ip, port)).player_count
         elif servers[game]["type"] == "minecraft":
             return mcstatus.JavaServer.lookup(f"{query_ip}:{port}").status().players.online
+        if servers[game]["type"] in ("quake","halo"):
+            return dict(qstat_query(f"{query_ip}:{port}", game)).get("numplayers", 0)
         return 0
     except Exception as e:
-        print("EXCEPTION in query_server():",e)
+        print(f"EXCEPTION in query_server({game}): {e}")
+        print(traceback.format_exc())
         return None
 
 def kill_tree(pid):
@@ -94,18 +127,27 @@ def kill_tree(pid):
             child.kill()
         parent.kill()
     except Exception:
-        print("EXCEPTION in kill_tree()... ignoring!")
+        print(f"EXCEPTION in kill_tree({pid})... ignoring!")
 
 def stop_server(game, sid, pid):
+    #if args.debug:
+    #    return
     if servers[game]["type"] in ("source","goldsrc","doom","quake"):
         screen_cmd(sid, "quit")
     elif servers[game]["type"] == "minecraft":
         screen_cmd(sid, "stop")
-    time.sleep(2)
+    time.sleep(1)
+    # i REALLY hate that there isnt a better way to do this
     if psutil.pid_exists(pid):
-        time.sleep(2)
+        time.sleep(1)
         if psutil.pid_exists(pid):
-            kill_tree(pid)
+            time.sleep(1)
+            if psutil.pid_exists(pid):
+                time.sleep(1)
+                if psutil.pid_exists(pid):
+                    time.sleep(1)
+                    if psutil.pid_exists(pid):
+                        kill_tree(pid)
 
 def msg_countdown(game, ids, sec):
     if sec >= 300:
@@ -164,102 +206,125 @@ if args.exclusive:
 
 try:
     for game in servers:
-        print(f"\n{_ing} {game} server(s)...")
-        
-        ids = [servers[game]["id"]] if not isinstance(servers[game]["id"], list) else servers[game]["id"]
-        ports = [servers[game]["port"]] if not isinstance(servers[game]["port"], list) else servers[game]["port"]
-        screens = os.listdir("/var/run/screen/S-eli")
-
-        game_type = servers[game].get("type")
-        flags = servers[game].get("flags", [])
-        gdir = f"/home/eli/_games/{game}/"
-
-        pids = {}
-        queries = {}
-        for sid in ids.copy():
-            indx = ids.index(sid)
-            port = ports[indx]
-            skip = False
-
-            # different games have different port mapping systems so this is necessary
-            if game_type in ("source", "minecraft"):
-                lsof_args = ['lsof', '-nPFp', f'-iTCP:{port}', '-sTCP:LISTEN']
-            elif game_type == "goldsrc":
-                lsof_args = ['lsof', '-nPFp', f'-iUDP:{port}']
-            else:
-                lsof_args = ['lsof', '-nPFp', f'-i:{port}']
-
-            pid = subprocess.run(lsof_args, capture_output=True, text=True).stdout
-
-            if not pid:
-                print(f"  '{sid}' offline! skipping...")
-                del ids[indx]
-                del ports[indx]
-            else:
-                pid = int(pid.strip().replace("p",""))
-                pids[sid] = pid
-                
-                if "noquery" not in flags:
-                    print(f"  querying '{sid}'...")
-                    queries[ids[indx]] = query_server(game, port)
+        try:
+            print(f"\n{_ing} {game} server(s)...")
             
-            # if multiple screens exist with the same name just kill all of them indiscriminately
-            screen_count = sum(1 for y in screens if y.endswith(sid))
-            if not screen_count:
-                print(f"  no screen found for '{sid}'!")
-            elif screen_count > 1:
-                print(f"  found multiple screens named '{sid}'! killing all of them... ({screen_count})")
-                scr_pids = sorted([int(x.split(".")[0]) for x in screens if x.endswith(game)])
-                for spid in scr_pids:
-                    kill_tree(spid)
-                pids.clear()
-                subprocess.run(['screen', '-wipe']) # removes dead screens and prevents any issues those may cause
+            ids = [servers[game]["id"]] if not isinstance(servers[game]["id"], list) else servers[game]["id"]
+            ports = [servers[game]["port"]] if not isinstance(servers[game]["port"], list) else servers[game]["port"]
 
-        if pids:
-            if "noquery" not in flags:
-                player_count = 0
-                timer = 60
+            game_type = servers[game].get("type")
+            flags = servers[game].get("flags", [])
+            gdir = f"{gamedir}{game}/"
 
-                # get highest playercount in group of servers (if any)
-                for server_id, query_count in queries.items():
-                    if query_count > 0:
-                        player_count += query_count
+            pids = {}
+            queries = {}
+            real_sids = {}
 
-                        if query_count > 4 and server_id in server_timers:
-                            server_timer = server_timers[server_id]
-                            timer = server_timer if server_timer > timer else timer
+            for sid in ids.copy():
+                indx = ids.index(sid)
+                port = ports[indx]
+                skip = False
 
-                if player_count <= 0:
-                    print("    no players online! skipping countdown.")
+                screens = sorted([int(x.split(".")[0]) for x in os.listdir(f"/var/run/screen/S-{user}") if x.endswith(sid)])
+                screen_count = sum(1 for y in screens)
+
+                # different games have different port mapping systems so this is necessary
+                if game_type in ("source", "minecraft"):
+                    lsof_args = ['lsof', '-nPFp', f'-iTCP:{port}', '-sTCP:LISTEN']
+                elif game_type == "goldsrc":
+                    lsof_args = ['lsof', '-nPFp', f'-iUDP:{port}']
                 else:
-                    if args.shutdown:
-                        screen_msg(game, ids, "the server is preparing to reboot and will offline for an indeterminate amount of time! please check discord.gg/chVeByf6uP for updates.")
-                    else:
-                        screen_msg(game, ids, "the server is scheduled to restart soon! check elisttm.space/servers or join discord.gg/chVeByf6uP for updates.")
-                    print(f"    {player_count} player(s) online! starting {timer} second countdown...")
-                    time.sleep(2)
-                    msg_countdown(game, ids, timer)
-            else:
-                screen_msg(game, ids, "this server is scheduled to restart in a few seconds! please check discord.gg/chVeByf6uP for updates.")
-                time.sleep(3)
+                    lsof_args = ['lsof', '-nPFp', f'-i:{port}']
 
-            for sid, pid in pids.items():
-                print(f"  closing {sid} ({pid})...")
-                stop_server(game, sid, pid)
+                pid = subprocess.run(lsof_args, capture_output=True, text=True).stdout
 
-        if not args.shutdown:
-            if "noupdate" not in flags and os.path.exists(f"{gdir}update.sh"):
-                print(f"  updating {game} server(s)")
-                subprocess.run(f"sed 's/validate//g' {gdir}update.sh | bash", shell=True, stdout=subprocess.DEVNULL)
+                if not pid:
+                    print(f"  '{sid}' offline! skipping...")
+                    del ids[indx]
+                    del ports[indx]
+                else:
+                    pid = int(pid.strip().replace("p",""))
+                    pids[sid] = pid
+                    
+                    if "noquery" not in flags:
+                        print(f"  querying '{sid}'...")
+                        queries[ids[indx]] = query_server(game, port)
+                    
+                    if args.debug:
+                        print(queries)
+                
+                # if multiple screens exist with the same name just kill all of them indiscriminately
+                if not screen_count:
+                    print(f"  no screen found for '{sid}'!")
+                elif screen_count > 1:
+                    print(f"  found multiple screens named '{sid}'! killing all of them... ({screen_count})")
+                    for spid in screens:
+                        stop_server(game, f"{spid}.{sid}", spid)
 
-            print(f"  starting {game} server(s)")
-            with open(f'{gdir}start.sh', 'r') as startfile:
-                start_cmd = f"{gdir}start.sh" if 's/qDRS/dmS/g' in startfile.read() else f"sed 's/qDRS/dmS/g' {gdir}start.sh | bash"
-            subprocess.Popen(start_cmd, shell=True, start_new_session=True, stdout=subprocess.DEVNULL)
+                    pids.clear()
+                    subprocess.run(['screen', '-wipe'], stdout=subprocess.DEVNULL) # removes dead screens and prevents any issues those may cause
+                    
+                else:
+                    real_sids[sid] = f"{screens[0]}.{sid}" # stupid
 
-except BaseException as e:
-    print(e)
-    screen_msg(game, ids, "server restart aborted! continue as you were...")
-    
+            if pids:
+                if "noquery" not in flags:
+                    player_count = 0
+                    timer = 60
+
+                    # get highest playercount in group of servers (if any)
+                    for server_id, query_count in queries.items():
+                        if not query_count:
+                            continue
+                        query_count = int(query_count) # fixes a ridiculous bug that i cannot replicate
+                        if query_count > 0:
+                            player_count += query_count
+
+                            if query_count > 4 and server_id in server_timers:
+                                server_timer = server_timers[server_id]
+                                timer = server_timer if server_timer > timer else timer
+
+                    if player_count <= 0:
+                        print("    no players online! skipping countdown.")
+                    elif not args.debug:
+                        if args.shutdown:
+                            screen_msg(game, ids, "the server is preparing to reboot and will offline for an indeterminate amount of time! please check discord.gg/chVeByf6uP for updates.")
+                        else:
+                            screen_msg(game, ids, "the server is scheduled to restart soon! check elisttm.space/servers or join discord.gg/chVeByf6uP for updates.")
+                        print(f"    {player_count} player(s) online! starting {timer} second countdown...")
+                        time.sleep(2)
+                        msg_countdown(game, ids, timer)
+                elif not args.debug:
+                    screen_msg(game, ids, "this server is scheduled to restart in a few seconds! please check discord.gg/chVeByf6uP for updates.")
+                    time.sleep(5)
+
+                if not args.debug:
+                    for sid, pid in pids.items():
+                        print(f"  closing {real_sids[sid]}...")
+                        stop_server(game, real_sids[sid], pid)
+
+            if not any((args.shutdown, args.debug)):
+
+                if "noupdate" not in flags and os.path.exists(f"{gdir}update.sh"):
+                    print(f"  updating {game} server(s)")
+                    subprocess.run(f"sed 's/validate//g' {gdir}update.sh | bash", shell=True, stdout=subprocess.DEVNULL)
+
+                print(f"  starting {game} server(s)")
+                with open(f'{gdir}start.sh', 'r') as startfile:
+                    start_cmd = f"{gdir}start.sh" if 's/qDRS/dmS/g' in startfile.read() else f"sed 's/qDRS/dmS/g' {gdir}start.sh | bash"
+                subprocess.Popen(start_cmd, shell=True, start_new_session=True, stdout=subprocess.DEVNULL)
+
+        except Exception:
+            print("STOPPING DUE TO EXCEPTION!")
+            print(traceback.format_exc())
+            screen_msg(game, ids, "server restart aborted due to an error! PLEASE get in contact if you see this message! @elisttm / discord.gg/chVeByf6uP")
+
+except KeyboardInterrupt:
+    print("FORCEFULLY STOPPING")
+    try:
+        screen_msg(game, ids, "server restart manually aborted! continue as you were...")
+    except Exception:
+        pass
+
 print(f"\n[{time.strftime('%x %X %Z')}] done!")
 print("\n--------------------------------------------------")
