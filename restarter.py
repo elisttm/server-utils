@@ -148,6 +148,8 @@ def stop_server(game, sid, pid):
                     time.sleep(1)
                     if psutil.pid_exists(pid):
                         kill_tree(pid)
+    time.sleep(0.1)
+    subprocess.run(['screen', '-wipe'], stdout=subprocess.DEVNULL) # removes dead screens and prevents any issues those may cause
 
 def msg_countdown(game, ids, sec):
     if sec >= 300:
@@ -239,9 +241,15 @@ try:
                 pid = subprocess.run(lsof_args, capture_output=True, text=True).stdout
 
                 if not pid:
-                    print(f"  '{sid}' offline! skipping...")
-                    del ids[indx]
-                    del ports[indx]
+                    if screen_count == 1:
+                        print(f"  <!> '{sid}' is unreachable, but a screen exists! stopping process...")
+                        stop_server(game, f"{screens[0]}.{sid}", screens[0])
+                    if screen_count > 1:
+                        print("   <!> '{sid}' is unreachable, but multiple screens exist! this should never happen, skipping query to be safe...")
+                    else:
+                        print(f"  '{sid}' is unreachable! skipping...")
+                        del ids[indx]
+                        del ports[indx]
                 else:
                     pid = int(pid.strip().replace("p",""))
                     pids[sid] = pid
@@ -259,10 +267,10 @@ try:
                 elif screen_count > 1:
                     print(f"  found multiple screens named '{sid}'! killing all of them... ({screen_count})")
                     for spid in screens:
+                        print(spid)
                         stop_server(game, f"{spid}.{sid}", spid)
 
-                    pids.clear()
-                    subprocess.run(['screen', '-wipe'], stdout=subprocess.DEVNULL) # removes dead screens and prevents any issues those may cause
+                    del pids[sid]
                     
                 else:
                     real_sids[sid] = f"{screens[0]}.{sid}" # stupid
