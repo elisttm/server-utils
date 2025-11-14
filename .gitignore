@@ -1,2 +1,9 @@
 extra/**
 notes
+
+**/__pycache__/
+.env
+.notes
+**.db
+**.dat
+**.journal

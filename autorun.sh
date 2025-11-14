@@ -15,14 +15,15 @@ SRUN () {
 echo "[$(DATETIME)] starting autorun tasks..."
 
 SRUN "/home/eli/_web/elisttm/start.sh"
-SRUN "/home/eli/_web/cupid/start.sh"
+SRUN "/home/eli/_web/elisttm/servers.sh"
 SRUN "/home/eli/_web/fileserver/start.sh"
-SRUN "/home/eli/_web/stav/start.sh"
 SRUN "/home/eli/_web/fastdl/start.sh"
+SRUN "/home/eli/_web/cupid/start.sh"
 
 SRUN "/home/eli/_other/elibot/start.sh"
 SRUN "/home/eli/_other/shermbot/start.sh"
-pm2 start /home/eli/_other/tf2autobot/ecosystem.json
+
+pm2 resurrect
 
 SRUN "/home/eli/_games/eldewrito/start.sh"
 
