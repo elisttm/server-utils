@@ -29,11 +29,6 @@ servers = {
         "type": "source",
         "msg": 'ulx tsay <!> {}; ulx playsound common/warning.wav',
     },
-    "hl2mp": {
-        "ids": {"hl2mp": 27039},
-        "type": "source",
-        "msg": 'sm_say <!> {}; sm_play @all "friends/message.wav"',
-    },
     "sven": {
         "ids": {"sven": 27040},
         "type": "goldsrc",
