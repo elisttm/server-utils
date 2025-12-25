@@ -25,15 +25,15 @@ SRUN "/home/eli/_other/shermbot/start.sh"
 
 pm2 resurrect
 
-SRUN "/home/eli/_games/eldewrito/start.sh"
+#SRUN "/home/eli/_games/eldewrito/start.sh"
 
-#SRUN "/home/eli/_games/doom/start.sh"
-SRUN "/home/eli/_games/quake/start.sh"
 SRUN "/home/eli/_games/hldm/start.sh"
 SUPD "/home/eli/_games/sven/update.sh" && SRUN "/home/eli/_games/sven/start.sh"
 SUPD "/home/eli/_games/tf2/update.sh" && SRUN "/home/eli/_games/tf2/start.sh"
 SUPD "/home/eli/_games/gmod/update.sh" && SRUN "/home/eli/_games/gmod/start.sh"
 SUPD "/home/eli/_games/mc-creative/update.sh" && SRUN "/home/eli/_games/mc-creative/start.sh"
+SUPD "/home/eli/_games/mc-park/update.sh" && SRUN "/home/eli/_games/mc-park/start.sh"
+SUPD "/home/eli/_games/mc-snow/update.sh" && SRUN "/home/eli/_games/mc-snow/start.sh"
 
 echo "[$(DATETIME)] autorun tasks completed!"
 

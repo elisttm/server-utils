@@ -50,11 +50,10 @@ servers = {
         "type": "minecraft",
         "msg": 'warning {}',
     },
-    "quake": {
-        "ids": {"quake": 27049},
-        "type": "quake",
-        "msg": 'say <!> {}',
-        "flags": ("noupdate")
+    "mc-park": {
+        "ids": {"mc-park": 25567},
+        "type": "minecraft",
+        "msg": 'warning {}',
     },
 }
 
@@ -71,9 +70,10 @@ error_logs = []
 
 # timer to use if playercount is above 4
 server_timers = {
-    "tf2b": 240,
-    "gmoda": 120,
-    "gmodb": 180,
+    "tf2a": 180,
+    "tf2b": 300,
+    "gmoda": 300,
+    "gmodb": 300,
 }
 
 def screen_cmd(sid, cmd):
@@ -154,8 +154,9 @@ def stop_server_warn(game, sid, pid):
     time.sleep(1)
     stop_server(game, sid, pid)
 
-def log(message):
-    error_logs.append(message)
+def log(message, priority=0):
+    if not (args.watchdog and priority == 0): 
+        error_logs.append(message)
     print(message)
 
 def ntfy_post(message, title=None, priority=None, tags=None):
@@ -221,11 +222,12 @@ def msg_countdown(game, ids, sec):
         time.sleep(1)
         screen_msg(game, ids, "the server will restart in 1 second!")
     if sec == 0:
-        print("    @ server(s) emptied! skipping...")
+        print("    @ server(s) emptied! skipping countdown...")
         screen_msg(game, ids, "server emptied! skipping countdown...")
 
 
-if __name__ == "__main__": # beginning of the actual script
+def restarter_main(): # main function :P
+    global servers
 
     _ing = "shutting down" if args.shutdown else "restarting"
 
@@ -288,7 +290,7 @@ if __name__ == "__main__": # beginning of the actual script
                         if screen_count > 1:
                             log(f"    <> '{sid}' is unreachable, but multiple screens exist! this should never happen, skipping query to be safe...")
                         else:
-                            log(f"    <> '{sid}' is offline! skipping...")
+                            log(f"    <> '{sid}' is offline! skipping query...")
                             ids.remove(sid)
                     else:
                         pids[sid] = int(pid.strip().replace("p",""))
@@ -334,11 +336,11 @@ if __name__ == "__main__": # beginning of the actual script
                             print("       - no players online! skipping countdown...")
                         else:
                             if args.shutdown:
-                                screen_msg(game, ids, "the server is preparing to reboot and will offline for an indeterminate amount of time! please check https://elisttm.space/servers for updates.")
+                                screen_msg(game, ids, "the server is preparing to reboot and will remain offline for an indeterminate amount of time! please check https://elisttm.space/servers for updates.")
                             elif game in args.update:
                                 screen_msg(game, ids, "a new game update is available! the server will restart soon, check elisttm.space/servers for updates.")
                             elif args.watchdog:
-                                screen_msg(game, ids, "the server will automatically restart soon due to a technical issue! check elisttm.space/servers for updates, apologies for the inconvenience!")
+                                screen_msg(game, ids, "an automated script has detected a technical issue and the server will restart soon! check elisttm.space/servers for updates, apologies for the inconvenience!")
                             else:
                                 screen_msg(game, ids, "the server is scheduled to restart soon! check elisttm.space/servers or join discord.gg/chVeByf6uP for updates.")
                             print(f"       -- {player_count} player(s) online! starting {timer} second countdown...")
@@ -371,7 +373,7 @@ if __name__ == "__main__": # beginning of the actual script
 
             except Exception:
                 screen_msg(game, ids, "server restart aborted due to an error! PLEASE get in contact if you see this message! @elisttm / discord.gg/chVeByf6uP")
-                log("<!> STOPPING DUE TO AN EXCEPTION! PLEASE CHECK LOGS... <!>")
+                log("<!> STOPPING DUE TO AN EXCEPTION! PLEASE CHECK LOGS... <!>", 1)
                 print(traceback.format_exc())
 
                 ntfy_post("restart script was aborted due to an error! please check logs...", "fatal error in restarter.py!", "high", "stop_sign")
@@ -388,8 +390,11 @@ if __name__ == "__main__": # beginning of the actual script
 
     print(f"\n----- [{time.strftime('%x %X')}] done in {elapsed}s! -----")
 
-    if not args.debug:
+    if not any([args.debug, args.watchdog]):
         if not error_logs:
             ntfy_post(f"successfully completed in {elapsed}s! no issues logged.", "restart script completed!", "min", "white_check_mark")
         else:
             ntfy_post(f"{len(error_logs)} possible issue(s) found!\n{'\n'.join(error_logs)}", f"restart script completed with {len(error_logs)} issues!", "default", "warning")
+
+if __name__ == "__main__":
+    restarter_main()

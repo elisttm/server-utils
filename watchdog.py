@@ -2,6 +2,7 @@
 
 import os, subprocess, time, vdf
 from restarter import (
+    args,
     user,
     gamedir,
     servers,
@@ -10,6 +11,7 @@ from restarter import (
     log,
     error_logs,
     get_pid,
+    restarter_main,
 )
 
 # set to false when debugging servers
@@ -19,7 +21,6 @@ if not run:
 
 outdated_servers = set()
 offline_servers = set()
-#error_logs = []
 
 restart_script = f"/home/{user}/restarter.py"
 log_file = "/home/eli/logs.txt"
@@ -35,7 +36,7 @@ appids = {
 def is_latest_version(game):
     if game in appids:
         try:
-            app_info = subprocess.run(f"{steamcmd} +app_info_update 1 +app_info_print {appids[game]} +quit", capture_output=True, text=True, check=True, shell=True, timeout=30).stdout
+            app_info = subprocess.run(f"{steamcmd} +login anonymous +app_info_update 1 +app_info_print {appids[game]} +quit", capture_output=True, text=True, check=True, shell=True, timeout=30).stdout
             latest = vdf.loads(app_info[app_info.find("{"):app_info.rfind("}")].strip())["depots"]["branches"]["public"]["buildid"]
             current = vdf.load(open(f"{gamedir}{game}/steamapps/appmanifest_{appids[game]}.acf"))["AppState"]["buildid"]
             return latest == current
@@ -80,9 +81,26 @@ for game in servers:
             continue
 
 if offline_servers or outdated_servers:
-    ntfy_post(f"found {len(offline_servers) + len(outdated_servers)} issues! restarter.py has been invoked, please check logs...\n\n{'\n'.join(error_logs)}", "watchdog found issues!", "high", "warning")
-    print(f"[{time.strftime('%x %X')}] found {len(offline_servers) + len(outdated_servers)} issues! invoking restarter.py to fix...\n")
+    watchdog_logs = error_logs
+    error_logs = []
 
-    subprocess.Popen(f"python {restart_script} --watchdog {('-e '+' '.join(offline_servers)+' ') if offline_servers else ''}{('-u '+' '.join(outdated_servers)+' ') if outdated_servers else ''}2>&1", shell=True, start_new_session=True)
+    args.watchdog = True
+    args.exclusive = list(offline_servers)
+    args.update = list(outdated_servers)
+
+    print(f"[{time.strftime('%x %X')}] found {len(offline_servers) + len(outdated_servers)} issue(s)! invoking restarter to fix...\n")
+
+    restarter_main()
+
+    if error_logs:
+        ntfy_post("restarter encountered an error via watchdog.py! please fix ASAP!!!!!", "fatal error in watchdog!", "max", "warning")
+    else:
+        if offline_servers:
+            print(f"[{time.strftime('%x %X')}] revived server(s) sucessfully!\n")
+            ntfy_post(f"found and attempted to revive {len(offline_servers)} offline servers! please check logs just to be sure...\n\n{'\n'.join(watchdog_logs)}", f"watchdog revived {len(offline_servers)} server(s)!", "default", "ballot_box_with_check")
+        if outdated_servers:
+            print(f"[{time.strftime('%x %X')}] updated server(s) sucessfully!\n")
+            ntfy_post(f"updated {len(outdated_servers)} out of date server(s)!\n\n{'\n'.join(watchdog_logs)}", f"watchdog updated {len(outdated_servers)} server(s)!", "low", "arrow_up_small")
+
 else:
     print(f"[{time.strftime('%x %X')}] no issues found!\n")
