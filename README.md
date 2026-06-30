@@ -20,4 +20,4 @@ a grossly overengineered autonomous batch restart script that checks, updates an
 an extension of restarter.py, checks all my important servers every 2 hours to ensure theyre all running without issue and invokes restarter.py as-needed
 
 ## fastdl.py
-a simple modular python webserver that serves files to valve source/goldsrc servers via the [fastdl protocol](https://developer.valvesoftware.com/wiki/FastDL)
+a simple python webserver that serves files to valve game servers via the [fastdl protocol](https://developer.valvesoftware.com/wiki/FastDL)

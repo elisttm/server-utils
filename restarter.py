@@ -150,7 +150,7 @@ def stop_server(game, sid, pid):
     subprocess.run(['screen', '-wipe'], stdout=subprocess.DEVNULL) # extremely important, dead screens will cause lots of issues
 
 def stop_server_warn(game, sid, pid):
-    screen_msg(game, sid, "this server is restarting due to a technical issue! if you see this message, PLEASE get in contact!!! (@elisttm / https://elisttm.space/)")
+    screen_msg(game, sid, "this server is restarting due to a technical issue! if you see this message, PLEASE get in contact!!! (@elisttm / eli.toys/)")
     time.sleep(1)
     stop_server(game, sid, pid)
 
@@ -336,16 +336,16 @@ def restarter_main(): # main function :P
                             print("       - no players online! skipping countdown...")
                         else:
                             if args.shutdown:
-                                screen_msg(game, ids, "the server is preparing to reboot and will remain offline for an indeterminate amount of time! please check https://elisttm.space/servers for updates.")
+                                screen_msg(game, ids, "the server is preparing to reboot and will remain offline for an indeterminate amount of time! please check eli.toys/servers for updates.")
                             elif game in args.update:
-                                screen_msg(game, ids, "a new game update is available! the server will restart soon, check elisttm.space/servers for updates.")
+                                screen_msg(game, ids, "a new game update is available! the server will restart soon, check eli.toys/servers for updates.")
                             elif args.watchdog:
-                                screen_msg(game, ids, "an automated script has detected a technical issue and the server will restart soon! check elisttm.space/servers for updates, apologies for the inconvenience!")
+                                screen_msg(game, ids, "an automated script has detected a technical issue and the server will restart soon! check eli.toys/servers for updates, apologies for the inconvenience!")
                             else:
-                                screen_msg(game, ids, "the server is scheduled to restart soon! check elisttm.space/servers or join discord.gg/chVeByf6uP for updates.")
+                                screen_msg(game, ids, "the server is scheduled to restart soon! check eli.toys/servers or join discord.gg/chVeByf6uP for updates.")
                             print(f"       -- {player_count} player(s) online! starting {timer} second countdown...")
-                            time.sleep(2)
-                            #msg_countdown(game, ids, timer)
+                            time.sleep(1)
+                            msg_countdown(game, ids, timer)
                     else:
                         screen_msg(game, ids, "this server is scheduled to restart in a few seconds! please check discord.gg/chVeByf6uP for updates.")
                         time.sleep(5)
