@@ -70,9 +70,10 @@ async def index():
 
 @app.route('/<game>/<path:path>')
 async def fastdl(game, path):
-    if scraper_filter.match(game+path):
-        await tarpit
     game = game.lower()
+    if scraper_filter.match(game+'/'+path):
+        print(f"[---] tarpit @ {game+'/'+path}")
+        return await tarpit()
     if game in paths and os.path.exists(paths[game]+path) and (path.lower().startswith(allowed_folders) or path.lower().endswith(allowed_filetypes)):
         if path.lower().endswith(".bz2"):
             return await abort(404)
@@ -84,8 +85,6 @@ async def fastdl(game, path):
     return await abort(404)
 
 async def tarpit():
-    if not scraper_filter.match(path):
-        return quart.abort(404)
     async def infinite_load():
         try:
             while True:
